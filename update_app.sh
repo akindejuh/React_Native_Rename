@@ -1,5 +1,5 @@
 #!/bin/bash
-# Example: ./update_app.sh Northquest com.northquest.app #ffffff
+# Example: ./update_app.sh yourAppName com.yourAppName.app #ffffff
 
 PRINT_ERROR() {
   local message="$*"
