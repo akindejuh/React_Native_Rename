@@ -1,8 +1,7 @@
 # Shell script for updating app configuration
 
 ## Initial App Name & Bundle ID:
-#### this script would target an app_name of "baseApp" and a bundle_id of "com.baseApp".
-#### update the constants with your app_name & bundle_id before running the script.
+This script would target an app_name of "baseApp" and a bundle_id of "com.baseApp". Update the constants with your app_name & bundle_id before running the script.
 
 
 ## Fix Permission issue:
