@@ -17,7 +17,7 @@ chmod +x ./scripts/update_app.sh
 ### 3. Example
 
 ```sh
-./scripts/update_app.sh Northquest com.northquest.app #121212
+./scripts/update_app.sh yourAppName com.yourAppName.app #121212
 ```
 
 ### 4. To update app_icon
