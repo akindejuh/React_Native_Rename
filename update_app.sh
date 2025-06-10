@@ -1,6 +1,9 @@
 #!/bin/bash
 # Example: ./update_app.sh yourAppName com.yourAppName.app #ffffff
 
+NEW_APP_ICON="app_icon.png"
+NEW_APP_ICON_BETA="app_icon_beta.png"
+
 PRINT_ERROR() {
   local message="$*"
   echo -e "\033[0;31m${message}\033[0m"
@@ -9,6 +12,20 @@ PRINT_ERROR() {
 PRINT_SUCCESS() {
   local message="$*"
   echo -e "\033[0;32m${message}\033[0m"
+}
+
+# Function to create circular icon with alpha transparency
+CREATE_CIRCULAR_ICON() {
+  local input_file="$1"
+  local output_file="$2"
+  local size="$3"
+  
+  # Create circular icon with transparent background
+  magick -size "${size}x${size}" xc:none \
+    -fill white -draw "circle $((size/2)),$((size/2)) $((size/2)),1" \
+    "$input_file" -resize "${size}x${size}" \
+    -compose SrcIn -composite \
+    "$output_file"
 }
 
 INIT_CHECKS() {
@@ -74,7 +91,7 @@ fi
 #############################
 # iOS => App Name
 #############################
-IOS_PLIST="../ios/northquestApp/Info.plist"
+IOS_PLIST="../ios/baseApp/Info.plist"
 if [ -f "$IOS_PLIST" ]; then
   SED_INPLACE "s/<string>$OLD_NAME<\/string>/<string>$NEW_NAME<\/string>/g" "$IOS_PLIST"
   SED_INPLACE "s/<string>\$(PRODUCT_BUNDLE_IDENTIFIER)<\/string>/<string>$NEW_BUNDLE_ID<\/string>/g" "$IOS_PLIST"
@@ -87,7 +104,7 @@ fi
 #############################
 # iOS => App Bundle ID
 #############################
-IOS_PROJECT="../ios/northquestApp.xcodeproj/project.pbxproj"
+IOS_PROJECT="../ios/baseApp.xcodeproj/project.pbxproj"
 if [ -f "$IOS_PROJECT" ]; then
   SED_INPLACE "s/$OLD_BUNDLE_ID/$NEW_BUNDLE_ID/g" "$IOS_PROJECT"
   PRINT_SUCCESS "Updated $IOS_PROJECT"
@@ -128,7 +145,7 @@ fi
 # iOS => Splash Logo
 #############################
 IOS_LOGO_SRC="./splash_logo.png"
-IOS_LOGO_DEST="../ios/northquestApp/Images.xcassets/logo.imageset/nq_logo.png"
+IOS_LOGO_DEST="../ios/baseApp/Images.xcassets/logo.imageset/nq_logo.png"
 if [ -f "$IOS_LOGO_SRC" ]; then
   cp "$IOS_LOGO_SRC" "$IOS_LOGO_DEST"
   PRINT_SUCCESS "Copied splash_logo.png to $IOS_LOGO_DEST"
@@ -139,7 +156,6 @@ fi
 #############################
 # iOS => App Icon
 #############################
-NEW_APP_ICON="app_icon.png"
 if [ -f "$NEW_APP_ICON" ]; then
   if ! command -v magick &> /dev/null; then
     PRINT_ERROR "ImageMagick is required but not installed. Aborting app icon update."
@@ -147,7 +163,7 @@ if [ -f "$NEW_APP_ICON" ]; then
     ICON_NAMES=("40" "58" "60" "80" "87" "120_60" "120" "180" "1024")
     ICON_SIZES=(40 58 60 80 87 120 120 180 1024)
 
-    IOS_RES_DIR="../ios/northquestApp/Images.xcassets/AppIcon.appiconset"
+    IOS_RES_DIR="../ios/baseApp/Images.xcassets/AppIcon.appiconset"
 
     for i in "${!ICON_NAMES[@]}"; do
       name="${ICON_NAMES[$i]}"
@@ -160,6 +176,31 @@ if [ -f "$NEW_APP_ICON" ]; then
   fi
 else
   PRINT_ERROR "File $NEW_APP_ICON not found in the root directory."
+fi
+
+#############################
+# iOS => App Icon Beta
+#############################
+if [ -f "$NEW_APP_ICON_BETA" ]; then
+  if ! command -v magick &> /dev/null; then
+    PRINT_ERROR "ImageMagick is required but not installed. Aborting app icon update."
+  else
+    ICON_NAMES=("40" "58" "60" "80" "87" "120_60" "120" "180" "1024")
+    ICON_SIZES=(40 58 60 80 87 120 120 180 1024)
+
+    IOS_RES_DIR="../ios/baseApp/Images.xcassets/AppIconBeta.appiconset"
+
+    for i in "${!ICON_NAMES[@]}"; do
+      name="${ICON_NAMES[$i]}"
+      size="${ICON_SIZES[$i]}"
+      dest_dir="$IOS_RES_DIR"
+      mkdir -p "$dest_dir"
+      magick "$NEW_APP_ICON_BETA" -resize "${size}x${size}" "$dest_dir/$name.png"
+      PRINT_SUCCESS "Updated icon for $IOS_RES_DIR/$name to ${size}x${size}"
+    done
+  fi
+else
+  PRINT_ERROR "File $NEW_APP_ICON_BETA not found in the root directory."
 fi
 ########################? iOS END ################################
 
@@ -215,7 +256,6 @@ fi
 #############################
 # Android => App Icon
 #############################
-NEW_APP_ICON="app_icon.png"
 if [ -f "$NEW_APP_ICON" ]; then
   if ! command -v magick &> /dev/null; then
     PRINT_ERROR "ImageMagick is required but not installed. Aborting app icon update."
@@ -231,8 +271,13 @@ if [ -f "$NEW_APP_ICON" ]; then
       size="${ICON_SIZES[$i]}"
       dest_dir="$ANDROID_RES_DIR/$folder"
       mkdir -p "$dest_dir"
+      
+      # Create regular launcher icon
       magick "$NEW_APP_ICON" -resize "${size}x${size}" "$dest_dir/ic_launcher.png"
-      magick "$NEW_APP_ICON" -resize "${size}x${size}" "$dest_dir/ic_launcher_round.png"
+      
+      # Create circular launcher icon with alpha transparency
+      CREATE_CIRCULAR_ICON "$NEW_APP_ICON" "$dest_dir/ic_launcher_round.png" "$size"
+      
       PRINT_SUCCESS "Updated icon for $folder to ${size}x${size}"
     done
   fi
@@ -240,8 +285,10 @@ else
   PRINT_ERROR "File $NEW_APP_ICON not found in the root directory."
 fi
 
-NEW_APP_ICON="app_icon_beta.png"
-if [ -f "$NEW_APP_ICON" ]; then
+#############################
+# Android => App Icon Beta
+#############################
+if [ -f "$NEW_APP_ICON_BETA" ]; then
   if ! command -v magick &> /dev/null; then
     PRINT_ERROR "ImageMagick is required but not installed. Aborting app icon update."
   else
@@ -256,13 +303,18 @@ if [ -f "$NEW_APP_ICON" ]; then
       size="${ICON_SIZES[$i]}"
       dest_dir="$ANDROID_RES_DIR/$folder"
       mkdir -p "$dest_dir"
-      magick "$NEW_APP_ICON" -resize "${size}x${size}" "$dest_dir/ic_launcher.png"
-      magick "$NEW_APP_ICON" -resize "${size}x${size}" "$dest_dir/ic_launcher_round.png"
+
+      # Create regular launcher icon
+      magick "$NEW_APP_ICON_BETA" -resize "${size}x${size}" "$dest_dir/ic_launcher.png"
+      
+      # Create circular launcher icon with alpha transparency
+      CREATE_CIRCULAR_ICON "$NEW_APP_ICON_BETA" "$dest_dir/ic_launcher_round.png" "$size"
+
       PRINT_SUCCESS "Updated icon for $folder to ${size}x${size}"
     done
   fi
 else
-  PRINT_ERROR "File $NEW_APP_ICON not found in the root beta directory."
+  PRINT_ERROR "File $NEW_APP_ICON_BETA not found in the root beta directory."
 fi
 ########################? ANDROID END #############################
 
